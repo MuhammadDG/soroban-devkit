@@ -1,6 +1,11 @@
 # CLI Command Reference
 
-The `sdkt-cli` crate uses `clap` (derive API) for command routing. Every command returns `Result<(), Box<dyn std::error::Error>>`; library errors (`RpcError`, `DecodeError`, `WasmError`) bubble up and are printed via `eprintln!` with a non-zero exit.
+The `sdkt-cli` crate uses `clap` (derive API) for command routing.
+
+## Related
+
+- **[Environment variables](environment.md)** — every environment variable the CLI reads: runtime store overrides (`SDKT_CACHE_DIR`, `SDKT_IDENTITY_DIR`, `SDKT_NETWORK_DIR`, `SDKT_PLUGIN_DIR`) and test-harness-only variables.
+- **[sdkt-agent — natural-language front end](agent.md)** — how to build it, what it can plan, and how it refuses ambiguous, unsupported, mutating, or production-network requests. Every command returns `Result<(), Box<dyn std::error::Error>>`; library errors (`RpcError`, `DecodeError`, `WasmError`) bubble up and are printed via `eprintln!` with a non-zero exit.
 
 ## Command Tree
 
@@ -18,7 +23,7 @@ sdkt
 ├── storage
 │   ├── check <contract-id>   [--abi <wasm>] [--abi-contract <id>] [--format]
 │   ├── analyze <contract-id> [--abi <wasm>] [--abi-contract <id>] [--format]
-│   ├── estimate <wasm-path>  [--format] (NOT YET IMPLEMENTED — placeholder only)
+│   ├── estimate <wasm-path>  [--ledgers <N>] [--format <pretty|json>]
 │   ├── read --contract <contract-id> --key-xdr <BASE64_XDR> [--abi <wasm>] [--format]
 │   └── extend --contract <contract-id> --ledgers <N> [--key <xdr>]... [--identity <name>] [--format]
 │
@@ -311,6 +316,8 @@ sdkt plugin list                                   # list installed plugins
 sdkt plugin list --format json                     # JSON output; every plugin subcommand accepts --format json
 sdkt plugin show <id>                              # show a plugin's metadata
 sdkt plugin install ./path/to/artifact.wasm        # install from a local file
+sdkt plugin install ./bundle.sdktplugin            # verify, then install a bundle (reports signed: true/false)
+sdkt plugin install ./bundle.sdktplugin --public-key ./pubkey.key               # require a signature from this author key (unsigned is refused)
 sdkt plugin remove <id>                            # remove (idempotent)
 sdkt plugin update <id> ./path/to/artifact.wasm    # local-only update
 sdkt plugin pack ./path/to/plugin-dir --output ./myrule.sdktplugin              # pack into .sdktplugin bundle
@@ -329,9 +336,11 @@ schema and the install-validation rules.
 Store root precedence (lowest → highest): `<cwd>/.sdkt/plugins`,
 `<config-dir>/sdkt/plugins`, `$SDKT_PLUGIN_DIR`.
 
+See [Environment variables](environment.md) for the full list of runtime store overrides and their defaults.
+
 - `--format json` is supported on all read-style commands, every `plugin` subcommand, and on `diff`, `audit`, `deploy`, `init` for scripting / CI.
 - `diff --upgrade-safety` and `deploy --deny-breaking` implement the Upgrade Safety Guard (see `ROADMAP.md`).
-- `audit` implements the static-analysis rules (AUTH-001/002/003/004, MOVE-001).
+- `audit` implements the static-analysis rules (AUTH-001/002/003/004, MOVE-001, MATH-001, CEI-001).
 - `audit --list-rules` discovers all registered built-in rules (with id, severity, and description). Supports `--format json` and does not require a source path argument.
 - **Mainnet safety.** Mutating commands (`tx submit`, `invoke`, `deploy`, `project deploy`) refuse to target mainnet unless you explicitly select the network — via `--network-profile`, `--rpc-url`, or `--network-passphrase`. A testnet-default passphrase pointed at a mainnet endpoint is rejected before any request is sent, protecting against signing for the wrong network.
 
